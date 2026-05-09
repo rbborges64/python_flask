@@ -1,0 +1,223 @@
+<!--
+=============================================================================
+templates/editar.html — Formulário de Edição de Aluno
+=============================================================================
+
+DIFERENÇA em relação ao cadastro.html:
+----------------------------------------
+- Os campos vêm PRÉ-PREENCHIDOS com os dados atuais do aluno
+- Usamos {{ aluno.campo }} para exibir os valores existentes
+- O formulário envia para a rota /editar/<id> em vez de /cadastrar
+
+{{ aluno.nome }}
+-----------------
+Jinja2 acessa os campos do objeto aluno como atributos.
+Como usamos row_factory = sqlite3.Row, podemos acessar:
+  aluno['nome']   → sintaxe de dicionário
+  aluno.nome      → sintaxe de atributo (suportada pelo sqlite3.Row)
+=============================================================================
+-->
+{% extends "base.html" %}
+
+{% block title %}Editar Aluno{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-warning text-dark py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-pencil-fill me-2"></i>Editar Aluno
+                </h5>
+            </div>
+
+            <div class="card-body p-4">
+
+                <!-- Exibe o ID do aluno para referência -->
+                <p class="text-muted small mb-3">
+                    <i class="bi bi-hash"></i> ID do aluno: <strong>{{ aluno.id }}</strong>
+                </p>
+
+                <!--
+                    url_for('editar', aluno_id=aluno.id)
+                    ------------------------------------
+                    Gera a URL /editar/3 (se o aluno.id for 3).
+                    Passamos o parâmetro aluno_id=aluno.id para url_for().
+                -->
+                <form action="{{ url_for('editar', aluno_id=aluno.id) }}" method="POST" novalidate>
+
+                    <!-- Campo: Nome (pré-preenchido) -->
+                    <div class="mb-3">
+                        <label for="nome" class="form-label fw-semibold">
+                            Nome do Aluno <span class="text-danger">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="nome"
+                            name="nome"
+                            value="{{ aluno.nome }}"
+                            required
+                        >
+                        <!--
+                            value="{{ aluno.nome }}"
+                            ------------------------
+                            Pré-preenche o campo com o valor atual do banco.
+                            O usuário verá o valor e pode editá-lo.
+                        -->
+                    </div>
+
+                    <!-- Campo: Nota (pré-preenchida) -->
+                    <div class="mb-3">
+                        <label for="nota" class="form-label fw-semibold">
+                            Nota <span class="text-danger">*</span>
+                        </label>
+                        <input
+                            type="number"
+                            class="form-control"
+                            id="nota"
+                            name="nota"
+                            value="{{ aluno.nota }}"
+                            min="0"
+                            max="10"
+                            step="0.1"
+                            required
+                        >
+                    </div>
+
+                    <!-- Campo: CEP (pré-preenchido) -->
+                    <div class="mb-3">
+                        <label for="cep" class="form-label fw-semibold">
+                            CEP <span class="text-muted fw-normal">(opcional)</span>
+                        </label>
+                        <div class="input-group">
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="cep"
+                                name="cep"
+                                value="{{ aluno.cep or '' }}"
+                                maxlength="9"
+                            >
+                            <!--
+                                aluno.cep or ''
+                                ---------------
+                                Se aluno.cep for None (não cadastrado), exibe '' (vazio).
+                                O 'or' em Python/Jinja2 retorna o segundo valor se o
+                                primeiro for falsy (None, 0, '', False...).
+                            -->
+                            <span class="input-group-text" id="cep-loading" style="display:none;">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            </span>
+                        </div>
+                        <div id="cep-feedback" class="form-text"></div>
+                    </div>
+
+                    <!-- Endereço atual (lido do banco) -->
+                    {% if aluno.logradouro %}
+                    <div class="p-3 bg-light rounded mb-3">
+                        <p class="text-muted small mb-1">
+                            <i class="bi bi-geo-alt-fill text-success me-1"></i>
+                            Endereço atual no banco de dados:
+                        </p>
+                        <p class="mb-0 small">
+                            {{ aluno.logradouro }}, {{ aluno.bairro }} — {{ aluno.cidade }}/{{ aluno.uf }}
+                        </p>
+                        <p class="text-muted small mt-1 mb-0">
+                            Se alterar o CEP, o endereço será atualizado automaticamente.
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Endereço encontrado via JS (igual ao cadastro.html) -->
+                    <div id="endereco-section" class="p-3 bg-light rounded mb-3" style="display:none;">
+                        <p class="text-muted small mb-2">
+                            <i class="bi bi-geo-alt-fill text-success me-1"></i>
+                            Novo endereço encontrado:
+                        </p>
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <input type="text" class="form-control form-control-sm" id="logradouro" readonly placeholder="Rua/Avenida">
+                            </div>
+                            <div class="col-md-6">
+                                <input type="text" class="form-control form-control-sm" id="bairro" readonly placeholder="Bairro">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" class="form-control form-control-sm" id="cidade" readonly placeholder="Cidade">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" class="form-control form-control-sm" id="uf" readonly placeholder="UF">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-warning flex-grow-1 fw-bold">
+                            <i class="bi bi-floppy-fill me-2"></i>Salvar Alterações
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Cancelar
+                        </a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- Mesmo JavaScript do cadastro.html para busca de CEP -->
+<script>
+document.getElementById('cep').addEventListener('blur', async function () {
+    const cep = this.value.replace(/\D/g, '');
+    const feedback  = document.getElementById('cep-feedback');
+    const loading   = document.getElementById('cep-loading');
+    const secao     = document.getElementById('endereco-section');
+
+    feedback.textContent = '';
+    feedback.className = 'form-text';
+    secao.style.display = 'none';
+
+    if (cep.length !== 8) {
+        if (cep.length > 0) {
+            feedback.textContent = 'CEP deve ter 8 dígitos.';
+            feedback.classList.add('text-danger');
+        }
+        return;
+    }
+
+    loading.style.display = 'inline-flex';
+    feedback.textContent = 'Buscando CEP...';
+
+    try {
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const dados = await response.json();
+
+        if (dados.erro) {
+            feedback.textContent = '⚠️ CEP não encontrado.';
+            feedback.className = 'form-text text-warning';
+        } else {
+            document.getElementById('logradouro').value = dados.logradouro || '';
+            document.getElementById('bairro').value     = dados.bairro     || '';
+            document.getElementById('cidade').value     = dados.localidade || '';
+            document.getElementById('uf').value         = dados.uf         || '';
+            secao.style.display = 'block';
+            feedback.textContent = '✅ Endereço encontrado!';
+            feedback.className = 'form-text text-success';
+        }
+    } catch (erro) {
+        feedback.textContent = '❌ Erro ao consultar CEP.';
+        feedback.className = 'form-text text-danger';
+    } finally {
+        loading.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

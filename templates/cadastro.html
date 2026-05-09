@@ -1,5 +1,268 @@
-<!-- Template base -->
- {% extends 'base.html' %}
+<!--
+=============================================================================
+templates/cadastro.html — Formulário de Cadastro de Aluno
+=============================================================================
 
- {% block title %}Novo Aluno {%endblock}
- 
+NOVIDADES NESTA PÁGINA:
+------------------------
+1. Formulário HTML com Bootstrap
+2. Busca automática de CEP via JavaScript (Fetch API)
+3. Feedback visual de loading no campo CEP
+=============================================================================
+-->
+{% extends "base.html" %}
+
+{% block title %}Cadastrar Aluno{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <!-- justify-content-center → centraliza horizontalmente -->
+    <div class="col-12 col-md-8 col-lg-6">
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-person-plus-fill me-2"></i>Cadastrar Novo Aluno
+                </h5>
+            </div>
+
+            <div class="card-body p-4">
+
+                <!--
+                    FORMULÁRIO HTML
+                    ---------------
+                    action="{{ url_for('cadastrar') }}"
+                        → Para onde os dados serão enviados (a rota /cadastrar)
+
+                    method="POST"
+                        → Método HTTP. POST é usado para enviar dados ao servidor.
+                          Os dados vão no CORPO da requisição (não aparecem na URL).
+
+                    novalidate
+                        → Desativa a validação nativa do HTML5 do navegador.
+                          Queremos que a validação seja feita pelo Python (server-side).
+                          Isso é mais seguro — validação só no cliente pode ser burlada.
+                -->
+                <form action="{{ url_for('cadastrar') }}" method="POST" novalidate>
+
+                    <!-- Campo: Nome -->
+                    <div class="mb-3">
+                        <label for="nome" class="form-label fw-semibold">
+                            Nome do Aluno <span class="text-danger">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="nome"
+                            name="nome"
+                            placeholder="Ex: João da Silva"
+                            required
+                            autocomplete="name"
+                        >
+                        <!--
+                            name="nome" → chave usada em request.form['nome'] no Python
+                            id="nome"   → associa o <label for="nome"> ao campo
+                        -->
+                        <div class="form-text text-muted">
+                            Mínimo 3 caracteres, máximo 100.
+                        </div>
+                    </div>
+
+                    <!-- Campo: Nota -->
+                    <div class="mb-3">
+                        <label for="nota" class="form-label fw-semibold">
+                            Nota <span class="text-danger">*</span>
+                        </label>
+                        <input
+                            type="number"
+                            class="form-control"
+                            id="nota"
+                            name="nota"
+                            placeholder="Ex: 7.5"
+                            min="0"
+                            max="10"
+                            step="0.1"
+                            required
+                        >
+                        <!--
+                            type="number" → teclado numérico no celular
+                            step="0.1"    → aceita decimais com 1 casa
+                            min/max       → validação visual no cliente (reforçada no servidor)
+                        -->
+                        <div class="form-text text-muted">
+                            Valor entre 0 e 10 (ex: 7.5)
+                        </div>
+                    </div>
+
+                    <!-- Campo: CEP com busca automática -->
+                    <div class="mb-3">
+                        <label for="cep" class="form-label fw-semibold">
+                            CEP
+                            <span class="text-muted fw-normal">(opcional)</span>
+                        </label>
+                        <div class="input-group">
+                            <!--
+                                input-group → agrupa o input com um elemento adicional
+                                (aqui usamos para mostrar um spinner de loading)
+                            -->
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="cep"
+                                name="cep"
+                                placeholder="Ex: 17501010"
+                                maxlength="9"
+                                autocomplete="postal-code"
+                            >
+                            <!-- Spinner: fica escondido e aparece durante a busca -->
+                            <span class="input-group-text" id="cep-loading" style="display:none;">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Buscando...</span>
+                                </div>
+                            </span>
+                        </div>
+                        <div id="cep-feedback" class="form-text"></div>
+                    </div>
+
+                    <!-- Campos de endereço (preenchidos automaticamente via JS) -->
+                    <div id="endereco-section" class="p-3 bg-light rounded mb-3" style="display:none;">
+                        <p class="text-muted small mb-2">
+                            <i class="bi bi-geo-alt-fill text-success me-1"></i>
+                            Endereço encontrado automaticamente:
+                        </p>
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <input type="text" class="form-control form-control-sm" id="logradouro" readonly placeholder="Rua/Avenida">
+                            </div>
+                            <div class="col-md-6">
+                                <input type="text" class="form-control form-control-sm" id="bairro" readonly placeholder="Bairro">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" class="form-control form-control-sm" id="cidade" readonly placeholder="Cidade">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" class="form-control form-control-sm" id="uf" readonly placeholder="UF">
+                            </div>
+                        </div>
+                        <!--
+                            readonly → o usuário não pode editar (o servidor buscará novamente pelo CEP).
+                            Esses campos são apenas informativos — o Flask busca o endereço no backend.
+                        -->
+                    </div>
+
+                    <!-- Botões de ação -->
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary flex-grow-1">
+                            <i class="bi bi-floppy-fill me-2"></i>Salvar Aluno
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Cancelar
+                        </a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<!--
+=============================================================================
+JAVASCRIPT: Busca de CEP com Fetch API
+=============================================================================
+
+O QUE É A FETCH API?
+---------------------
+Fetch é uma função nativa do JavaScript moderno que faz requisições HTTP
+de forma assíncrona (sem recarregar a página).
+
+FLUXO DO CEP:
+1. Usuário digita o CEP
+2. JavaScript detecta quando o campo perde o foco (evento 'blur')
+3. Faz uma requisição GET para a API ViaCEP diretamente do navegador
+4. Preenche os campos de endereço automaticamente
+
+POR QUE FAZEMOS NO JS E TAMBÉM NO PYTHON?
+------------------------------------------
+- JS (client-side): experiência do usuário — feedback imediato, visual
+- Python (server-side): segurança — nunca confie em dados do cliente!
+  O servidor sempre re-busca o endereço ao salvar.
+
+async / await:
+--------------
+São palavras-chave para programação assíncrona em JavaScript.
+'async' define uma função assíncrona.
+'await' pausa a execução e espera uma Promise ser resolvida.
+Isso permite que a página continue responsiva enquanto espera a API.
+=============================================================================
+-->
+<script>
+document.getElementById('cep').addEventListener('blur', async function () {
+    // 'blur' → evento disparado quando o campo perde o foco (usuário sai do campo)
+
+    const cep = this.value.replace(/\D/g, '');
+    // /\D/g → expressão regular que remove tudo que NÃO for dígito
+    // replace('', '') → substitui por vazio (remove)
+
+    const feedback  = document.getElementById('cep-feedback');
+    const loading   = document.getElementById('cep-loading');
+    const secao     = document.getElementById('endereco-section');
+
+    // Limpa exibição anterior
+    feedback.textContent = '';
+    feedback.className = 'form-text';
+    secao.style.display = 'none';
+
+    if (cep.length !== 8) {
+        if (cep.length > 0) {
+            feedback.textContent = 'CEP deve ter 8 dígitos.';
+            feedback.classList.add('text-danger');
+        }
+        return; // Interrompe a execução se o CEP não tem 8 dígitos
+    }
+
+    // Exibe o spinner de loading
+    loading.style.display = 'inline-flex';
+    feedback.textContent = 'Buscando CEP...';
+    feedback.className = 'form-text text-muted';
+
+    try {
+        // Fetch API: faz uma requisição GET para a ViaCEP
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const dados = await response.json(); // Converte a resposta JSON em objeto JS
+
+        if (dados.erro) {
+            // A API retorna {erro: true} se o CEP não existe
+            feedback.textContent = '⚠️ CEP não encontrado.';
+            feedback.className = 'form-text text-warning';
+        } else {
+            // Preenche os campos visuais com os dados recebidos
+            document.getElementById('logradouro').value = dados.logradouro || '';
+            document.getElementById('bairro').value     = dados.bairro     || '';
+            document.getElementById('cidade').value     = dados.localidade || '';
+            document.getElementById('uf').value         = dados.uf         || '';
+
+            secao.style.display = 'block'; // Exibe a seção de endereço
+
+            feedback.textContent = '✅ Endereço encontrado!';
+            feedback.className = 'form-text text-success';
+        }
+
+    } catch (erro) {
+        // Captura erros de rede (sem internet, timeout, etc.)
+        feedback.textContent = '❌ Erro ao consultar CEP. Verifique sua conexão.';
+        feedback.className = 'form-text text-danger';
+        console.error('Erro ViaCEP:', erro);
+    } finally {
+        // 'finally' sempre executa, com ou sem erro
+        loading.style.display = 'none'; // Oculta o spinner
+    }
+});
+</script>
+{% endblock %}
