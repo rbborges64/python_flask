@@ -1,5 +1,157 @@
-{% extends 'base.html' %}
+{#
+=============================================================================
+templates/index.html — Página Inicial: Lista de Alunos
+
+{% extends "base.html" %}
+Declara que este template HERDA de base.html.
+O conteúdo de base.html (navbar, flash messages, footer)
+aparece automaticamente.
+
+SINTAXE JINJA2 USADA NESTA PÁGINA:
+{{ variavel }}           → exibe valor de variável
+{% if %}...{% endif %}   → condicional
+{% for %}...{% endfor %} → laço de repetição
+loop.index               → número da iteração atual (começa em 1)
+aluno.campo              → acessa campo do objeto aluno
+=============================================================================
+#}
+{% extends "base.html" %}
+
 {% block title %}Lista de Alunos{% endblock %}
+
 {% block content %}
+
+<div class="row g-3 mb-4">
+
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                    <i class="bi bi-people-fill text-primary fs-4"></i>
+                </div>
+                <div>
+                    <p class="text-muted mb-0 small">Total de Alunos</p>
+                    <h3 class="fw-bold mb-0">{{ total }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="rounded-circle bg-success bg-opacity-10 p-3 me-3">
+                    <i class="bi bi-graph-up text-success fs-4"></i>
+                </div>
+                <div>
+                    <p class="text-muted mb-0 small">Média da Turma</p>
+                    <h3 class="fw-bold mb-0">{{ media }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100 bg-primary">
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <a href="{{ url_for('cadastrar') }}" class="btn btn-light btn-lg fw-bold">
+                    <i class="bi bi-person-plus-fill me-2"></i>Novo Aluno
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0 fw-bold">
+            <i class="bi bi-table me-2 text-primary"></i>Alunos Cadastrados
+        </h5>
+    </div>
+
+    <div class="card-body p-0">
+
+        {% if alunos %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Nome</th>
+                        <th>Nota</th>
+                        <th>Situação</th>
+                        <th>Endereço</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for aluno in alunos %}
+                    <tr>
+                        <td class="text-muted small">{{ loop.index }}</td>
+
+                        <td><strong>{{ aluno.nome }}</strong></td>
+
+                        <td>
+                            <span class="badge fs-6
+                                {% if aluno.nota >= 7.0 %}bg-success
+                                {% elif aluno.nota >= 5.0 %}bg-warning text-dark
+                                {% else %}bg-danger{% endif %}">
+                                {{ aluno.nota }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="badge
+                                {% if aluno.situacao == 'Aprovado' %}bg-success
+                                {% elif aluno.situacao == 'Recuperação' %}bg-warning text-dark
+                                {% else %}bg-danger{% endif %}">
+                                {{ aluno.situacao }}
+                            </span>
+                        </td>
+
+                        <td class="small text-muted">
+                            {% if aluno.logradouro %}
+                                <i class="bi bi-geo-alt-fill text-danger me-1"></i>
+                                {{ aluno.logradouro }}, {{ aluno.bairro }} — {{ aluno.cidade }}/{{ aluno.uf }}
+                            {% else %}
+                                <span class="text-muted">Não informado</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center">
+                            <a href="{{ url_for('editar', aluno_id=aluno.id) }}"
+                               class="btn btn-sm btn-outline-primary me-1"
+                               title="Editar aluno">
+                                <i class="bi bi-pencil-fill"></i>
+                            </a>
+
+                            <form action="{{ url_for('deletar', aluno_id=aluno.id) }}"
+                                  method="POST"
+                                  class="d-inline"
+                                  onsubmit="return confirm('Tem certeza que deseja remover {{ aluno.nome }}?')">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Remover aluno">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+            <p class="text-muted mt-3">Nenhum aluno cadastrado ainda.</p>
+            <a href="{{ url_for('cadastrar') }}" class="btn btn-primary">
+                <i class="bi bi-person-plus-fill me-2"></i>Cadastrar primeiro aluno
+            </a>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
 
 {% endblock %}
